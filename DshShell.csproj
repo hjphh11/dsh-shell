@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>DshShell</AssemblyName>
+    <RootNamespace>DshShell</RootNamespace>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <Version>0.2.0</Version>
+    <!-- Bumped from 0.1.0: this build reworks startup reliability (stale-process
+         retry, stale-timer guard, WebView2 fallback), tightens the ready-URL
+         boundary, and adds the test projects. The version is also how a user
+         can tell a freshly published exe from a stale one. -->
+    <FileVersion>0.2.0.0</FileVersion>
+    <AssemblyVersion>0.2.0.0</AssemblyVersion>
+    <Product>DeepSeek Harness Shell</Product>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- WebView2 ships a WPF flavour next to the WinForms one; the resulting
+         WindowsBase 4.0/5.0 unification notice is not actionable here. -->
+    <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3277</MSBuildWarningsAsMessages>
+  </PropertyGroup>
+
+  <!-- The startup failure paths are internal by design; the test project
+       exercises them directly rather than through the public surface. -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>DshShell.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4191.47" />
+  </ItemGroup>
+
+  <!-- The test project lives under tests\ inside this directory, so the SDK's
+       default recursive glob would otherwise compile its sources into this
+       assembly (and fail on the absent MSTest references). -->
+  <ItemGroup>
+    <Compile Remove="tests\**" />
+    <None Remove="tests\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="wwwroot\splash.html" />
+    <EmbeddedResource Include="deepseek-color.svg" />
+  </ItemGroup>
+
+</Project>

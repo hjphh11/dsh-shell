@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>启动中…</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --ink: #1a1d24;
+    --ink-dim: #8a93a6;
+    --accent: #4d6bfe;          /* DeepSeek brand blue */
+    --accent-soft: #7b93ff;
+    --hairline: rgba(0, 0, 0, 0.08);
+    --warn: #c2506a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    font-family: "Segoe UI Variable Display", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+    color: var(--ink);
+    user-select: none;
+    cursor: default;
+  }
+
+  /* static ambient tint (no animation) */
+  .ambient {
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 55% 42% at 50% 40%, rgba(77, 107, 254, 0.06), transparent 70%),
+      radial-gradient(ellipse 90% 65% at 50% 115%, rgba(77, 107, 254, 0.04), transparent 60%);
+  }
+
+  .stage {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .brand { display: flex; flex-direction: column; align-items: center; }
+
+  .mark {
+    width: 84px; height: 84px;
+    margin-bottom: 36px;
+    border-radius: 22px;
+    border: 1px solid var(--hairline);
+    background: #ffffff;
+    display: grid; place-items: center;
+    box-shadow:
+      0 2px 6px rgba(20, 30, 60, 0.05),
+      0 24px 60px -20px rgba(77, 107, 254, 0.35);
+    animation: mark-in 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  @keyframes mark-in {
+    from { opacity: 0; transform: translateY(14px) scale(0.94); }
+    to   { opacity: 1; transform: none; }
+  }
+  .mark img { width: 48px; height: 48px; }
+
+  .wordmark {
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    animation: rise 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) 0.12s both;
+    background: linear-gradient(180deg, #20242e 30%, #555c6b 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .tagline {
+    margin-top: 12px;
+    font-size: 12.5px;
+    letter-spacing: 0.34em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    animation: rise 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) 0.26s both;
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* footer */
+  .footer {
+    position: fixed;
+    left: 0; right: 0; bottom: 64px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  /*
+   * line-scale loader — borrowed from loaders.css (ConnorAtherton, ~10k stars).
+   * The ONLY continuously-running animation on this screen.
+   */
+  .loader {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: 30px;
+    animation: rise 0.8s ease 0.4s both;
+  }
+  .loader i {
+    width: 4px;
+    height: 30px;
+    border-radius: 2px;
+    background: var(--accent);
+    animation: line-scale 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  .loader i:nth-child(2) { animation-delay: 0.1s; }
+  .loader i:nth-child(3) { animation-delay: 0.2s; }
+  .loader i:nth-child(4) { animation-delay: 0.3s; }
+  .loader i:nth-child(5) { animation-delay: 0.4s; }
+  @keyframes line-scale {
+    0%, 40%, 100% { transform: scaleY(0.4); opacity: 0.45; }
+    20%           { transform: scaleY(1);   opacity: 1; }
+  }
+
+  .status {
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    color: var(--ink-dim);
+    transition: opacity 0.25s ease;
+    min-height: 18px;
+  }
+  .status.swap { opacity: 0; }
+
+  /* Determinate progress for the npm phases. npm exposes no percentage, so this
+     is "packages fetched" over an expected total and may land slightly short of
+     100% - a moving number beats a still screen for a ~223 MB download. */
+  .bar {
+    display: none;
+    width: 280px;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(77, 107, 254, 0.14);
+    overflow: hidden;
+  }
+  .bar.visible { display: block; }
+  .bar > i {
+    display: block;
+    height: 100%;
+    width: 0%;
+    border-radius: 2px;
+    background: var(--accent);
+    transition: width 0.2s linear;
+  }
+  /* Indeterminate: dependency resolution has no countable signal, so the bar
+     sweeps instead of pretending to know how far along it is. */
+  .bar.indeterminate > i {
+    width: 35%;
+    transition: none;
+    animation: sweep 1.3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  @keyframes sweep {
+    0%   { transform: translateX(-110%); }
+    100% { transform: translateX(320%); }
+  }
+
+  /* error state */
+  .error-panel {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    animation: rise 0.5s ease both;
+  }
+  .error-panel.visible { display: flex; }
+  .error-panel .status { max-width: 520px; text-align: center; line-height: 1.7; color: var(--warn); }
+  .actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .retry, .secondary, .danger {
+    appearance: none;
+    font: inherit;
+    font-size: 13.5px;
+    letter-spacing: 0.1em;
+    padding: 10px 30px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
+  }
+  .retry {
+    border: 1px solid rgba(77, 107, 254, 0.5);
+    color: var(--accent);
+    background: rgba(77, 107, 254, 0.05);
+  }
+  .retry:hover { background: rgba(77, 107, 254, 0.12); }
+  .secondary {
+    border: 1px solid var(--hairline);
+    color: var(--ink-dim);
+    background: transparent;
+    padding: 10px 22px;
+    letter-spacing: 0.06em;
+  }
+  .secondary:hover { background: rgba(0, 0, 0, 0.04); color: var(--ink); }
+  .danger {
+    border: 1px solid rgba(194, 80, 106, 0.45);
+    color: var(--warn);
+    background: rgba(194, 80, 106, 0.05);
+    padding: 10px 22px;
+    letter-spacing: 0.06em;
+  }
+  .danger:hover { background: rgba(194, 80, 106, 0.12); }
+  .retry:active, .secondary:active, .danger:active { transform: scale(0.97); }
+
+  /* environment summary pinned to the bottom of the screen */
+  .env {
+    position: fixed;
+    left: 0; right: 0; bottom: 22px;
+    display: flex;
+    justify-content: center;
+    gap: 0.9em;
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    color: var(--ink-dim);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .env.visible { opacity: 0.85; }
+  .env span { white-space: nowrap; }
+  .env .sep { opacity: 0.45; }
+  /* A missing prerequisite is the one thing on this screen a user must act on. */
+  .env span.missing { color: var(--warn); opacity: 1; }
+
+  /* exiting */
+  .exiting .stage, .exiting .footer, .exiting .env { transition: opacity 0.55s ease; opacity: 0; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="ambient"></div>
+
+  <div class="stage">
+    <div class="brand">
+      <div class="mark">
+        <img src="https://app.dsh-shell.local/deepseek-color.svg" alt="DeepSeek">
+      </div>
+      <div class="wordmark">DeepSeek Harness</div>
+      <div class="tagline">Shell</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="loader" id="loader"><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="status" id="status">正在启动引擎…</div>
+    <div class="bar" id="bar"><i id="barFill"></i></div>
+    <div class="error-panel" id="errorPanel">
+      <div class="status" id="errorText"></div>
+      <div class="actions">
+        <button class="retry" id="retryBtn">重 试</button>
+        <button class="secondary" id="logBtn">打开日志</button>
+        <button class="danger hidden" id="reinstallBtn">重新安装引擎</button>
+      </div>
+      <div class="status hidden" id="reinstallNote" style="color: var(--ink-dim); font-size: 11.5px;">
+        重新安装会删除本地引擎目录并联网重新下载（约 5 分钟）；会话记录与设置不受影响。
+      </div>
+    </div>
+  </div>
+
+  <div class="env" id="env"></div>
+
+<script>
+  const statusEl = document.getElementById("status");
+  const loaderEl = document.getElementById("loader");
+  const errorPanel = document.getElementById("errorPanel");
+  const errorText = document.getElementById("errorText");
+  const retryBtn = document.getElementById("retryBtn");
+  const logBtn = document.getElementById("logBtn");
+  const reinstallBtn = document.getElementById("reinstallBtn");
+  const reinstallNote = document.getElementById("reinstallNote");
+  const envEl = document.getElementById("env");
+  const barEl = document.getElementById("bar");
+  const barFill = document.getElementById("barFill");
+  // Post plain objects; the host reads WebMessageAsJson.
+  const send = (msg) => window.chrome?.webview?.postMessage(msg);
+
+  let lastStatus = "正在启动引擎…";
+  function setStatus(text) {
+    if (text === lastStatus) return;
+    lastStatus = text;
+    statusEl.classList.add("swap");
+    setTimeout(() => {
+      statusEl.textContent = text;
+      statusEl.classList.remove("swap");
+    }, 250);
+  }
+
+  function showError(message, reinstallable) {
+    loaderEl.classList.add("hidden");
+    barEl.classList.remove("visible");
+    statusEl.classList.add("hidden");
+    errorText.textContent = message;
+    // Reinstalling deletes hundreds of MB, so it is only offered where it can
+    // plausibly help - a missing runtime or a network problem is not that.
+    reinstallBtn.classList.toggle("hidden", !reinstallable);
+    reinstallNote.classList.toggle("hidden", !reinstallable);
+    errorPanel.classList.add("visible");
+  }
+
+  function reset() {
+    errorPanel.classList.remove("visible");
+    loaderEl.classList.remove("hidden");
+    barEl.classList.remove("visible", "indeterminate");
+    barFill.style.width = "";
+    statusEl.classList.remove("hidden");
+    setStatus("正在启动引擎…");
+  }
+
+  retryBtn.addEventListener("click", () => {
+    reset();
+    send({ type: "retry" });
+  });
+  logBtn.addEventListener("click", () => send({ type: "open-log" }));
+  reinstallBtn.addEventListener("click", () => {
+    // Deliberately blunt: this destroys the local engine installation.
+    const ok = window.confirm(
+      "确定要重新安装 DSH 引擎吗？\n\n" +
+      "将删除本地引擎目录，然后联网重新下载（约 5 分钟）。\n" +
+      "您的会话记录和设置不受影响。");
+    if (!ok) return;
+    reset();
+    send({ type: "reinstall" });
+  });
+
+  // Build the environment summary from what the host already detected.
+  function renderEnv(env) {
+    if (!env) return;
+    const parts = [];
+    const add = (label, value, missing) => {
+      const span = document.createElement("span");
+      span.textContent = label + " " + value;
+      if (missing) span.className = "missing";
+      parts.push(span);
+    };
+
+    add("Node", env.node || "未检测到", !env.node);
+    add("引擎", env.engine || "未安装", !env.engine);
+    add("WebView2", env.webView2 || "未知", false);
+
+    envEl.textContent = "";
+    parts.forEach((span, i) => {
+      if (i > 0) {
+        const sep = document.createElement("span");
+        sep.className = "sep";
+        sep.textContent = "·";
+        envEl.appendChild(sep);
+      }
+      envEl.appendChild(span);
+    });
+    envEl.classList.add("visible");
+  }
+
+  // Show install/update progress. Only the download phase carries a real
+  // counter; resolution and "finishing" are shown as an indeterminate sweep
+  // rather than inventing a percentage.
+  function renderProgress(p) {
+    if (!p) return;
+    barEl.classList.add("visible");
+
+    if (p.determinate && p.total > 0) {
+      barEl.classList.remove("indeterminate");
+      const pct = Math.max(0, Math.min(100, (p.done / p.total) * 100));
+      barFill.style.width = pct.toFixed(1) + "%";
+      setStatus("正在下载依赖 " + p.done + " / " + p.total + " 个包");
+    } else {
+      barEl.classList.add("indeterminate");
+      barFill.style.width = "";
+      if (p.phase === "finishing") setStatus("正在写入文件…");
+      else if (p.phase === "applying") setStatus("正在更新引擎…");
+      else setStatus("正在解析依赖…");
+    }
+  }
+
+  window.chrome?.webview?.addEventListener("message", (e) => {
+    let msg;
+    try {
+      // PostWebMessageAsJson arrives as a parsed object; be tolerant of strings too.
+      msg = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
+    } catch { return; }
+    if (!msg || typeof msg !== "object") return;
+    switch (msg.type) {
+      case "env": renderEnv(msg.env); break;
+      case "progress": renderProgress(msg.progress); break;
+      case "status": setStatus(msg.text); break;
+      case "ready": {
+        setStatus("即将进入…");
+        barEl.classList.remove("visible");
+        loaderEl.style.transition = "opacity 0.4s ease";
+        loaderEl.style.opacity = "0";
+        setTimeout(() => {
+          document.body.classList.add("exiting");
+          setTimeout(() => send({ type: "splash-faded" }), 600);
+        }, 450);
+        break;
+      }
+      case "error": showError(msg.message || "启动失败，请重试。", !!msg.reinstallable); break;
+      case "reset": reset(); break;
+    }
+  });
+
+  setStatus("正在启动引擎…");
+</script>
+</body>
+</html>

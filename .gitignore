@@ -1,0 +1,21 @@
+# build output
+bin/
+obj/
+publish/
+
+# tooling (sharp is only needed to regenerate app.ico; its lockfile IS tracked
+# so a clean checkout builds the same icon toolchain)
+tools/node_modules/
+
+# user/IDE
+*.user
+.vs/
+.sln
+.idea/
+
+# local test leftovers
+testenv/
+testenv-*/
+
+# local-only notes (review write-ups, scratch analysis) - never published
+.local-notes/
