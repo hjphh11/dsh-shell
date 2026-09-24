@@ -57,7 +57,15 @@
 
 ## 使用
 
-从 Releases 下载 `DshShell.exe`，双击即可。无需安装，也无需 .NET 运行时（已内嵌）。
+从 [Releases](https://github.com/hjphh11/dsh-shell/releases/latest) 下载 `DshShell.exe`，双击即可。
+无需安装，也无需 .NET 运行时（已内嵌）。
+
+校验下载（可选）：
+
+```powershell
+Get-FileHash .\DshShell.exe -Algorithm SHA256
+# v0.2.0: 34C6E23A8291A02597BD3BE67B07A7576F4020962C97A3B9C6022DFD1D4752CA
+```
 
 > 尚未做代码签名，首次运行可能触发 SmartScreen 提示，选择「更多信息 → 仍要运行」。
 
